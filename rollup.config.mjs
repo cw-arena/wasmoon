@@ -1,17 +1,19 @@
 import typescript from '@rollup/plugin-typescript'
 import copy from 'rollup-plugin-copy'
-import pkg from './package.json' assert { type: 'json' }
+import fs from 'fs'
 
+const pkg = JSON.parse(fs.readFileSync('./package.json', { encoding: 'utf-8' }))
 const production = !process.env.ROLLUP_WATCH
 
 export default {
     input: './src/index.ts',
     output: {
         file: 'dist/index.js',
-        format: 'umd',
+        format: 'es',
         name: 'wasmoon',
         sourcemap: !production,
     },
+    external: ['module'],
     plugins: [
         {
             name: 'package-version',
