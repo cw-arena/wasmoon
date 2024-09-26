@@ -37,18 +37,22 @@ export type FactoryWasmSource = {
 export type WasmSource = UriWasmSource | FactoryWasmSource
 
 export default class LuaWasm {
-    public static async initialize(source: WasmSource, environmentVariables?: EnvironmentVariables): Promise<LuaWasm> {
+    public static async initialize(source?: WasmSource | string, environmentVariables?: EnvironmentVariables): Promise<LuaWasm> {
+        if (typeof source === 'string') {
+            source = { type: 'uri', uri: source }
+        }
+
         const module: LuaEmscriptenModule = await initWasmModule({
             instantiateWasm: (imports: Record<string, any>, successCallback: (inst: WebAssembly.Instance) => void) => {
-                if (source.type !== 'factory') {
-                    return false
+                if (typeof source !== 'undefined' && source.type === 'factory') {
+                    source.instanceFactory(imports).then(({ instance }) => successCallback(instance))
+                    return {}
                 }
-                source.instanceFactory(imports).then(({ instance }) => successCallback(instance))
-                return {}
+                return false
             },
             locateFile: (path: string, scriptDirectory: string) => {
                 let filePath = scriptDirectory + path
-                if (source.type === 'uri') {
+                if (typeof source !== 'undefined' && source.type === 'uri') {
                     filePath = source.uri || filePath
                 }
                 return filePath
