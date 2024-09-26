@@ -29,6 +29,7 @@ emcc \
         'stringToNewUTF8'
     ]" \
     -s INCOMING_MODULE_JS_API="[
+        'instantiateWasm', \
         'locateFile', \
         'preRun'
     ]" \

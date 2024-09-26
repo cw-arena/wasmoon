@@ -20,11 +20,38 @@ interface ReferenceMetadata {
     refCount: number
 }
 
+export type UriWasmSource = {
+    type: 'uri'
+    uri?: string
+}
+
+export type FactoryOptions = {
+    imports: Record<string, any>
+}
+
+export type FactoryWasmSource = {
+    type: 'factory'
+    instanceFactory: (imports: Record<string, any>) => Promise<{ instance: WebAssembly.Instance }>
+}
+
+export type WasmSource = UriWasmSource | FactoryWasmSource
+
 export default class LuaWasm {
-    public static async initialize(customWasmFileLocation?: string, environmentVariables?: EnvironmentVariables): Promise<LuaWasm> {
+    public static async initialize(source: WasmSource, environmentVariables?: EnvironmentVariables): Promise<LuaWasm> {
         const module: LuaEmscriptenModule = await initWasmModule({
+            instantiateWasm: (imports: Record<string, any>, successCallback: (inst: WebAssembly.Instance) => void) => {
+                if (source.type !== 'factory') {
+                    return false
+                }
+                source.instanceFactory(imports).then(({ instance }) => successCallback(instance))
+                return {}
+            },
             locateFile: (path: string, scriptDirectory: string) => {
-                return customWasmFileLocation || scriptDirectory + path
+                let filePath = scriptDirectory + path
+                if (source.type === 'uri') {
+                    filePath = source.uri || filePath
+                }
+                return filePath
             },
             preRun: (initializedModule: LuaEmscriptenModule) => {
                 if (typeof environmentVariables === 'object') {

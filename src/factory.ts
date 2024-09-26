@@ -1,24 +1,29 @@
 import { EnvironmentVariables } from './types'
 import LuaEngine from './engine'
-import LuaWasm from './luawasm'
+import LuaWasm, { WasmSource } from './luawasm'
 // A rollup plugin will resolve this to the current version on package.json
 import version from 'package-version'
 
 export default class LuaFactory {
     private luaWasmPromise: Promise<LuaWasm>
 
-    public constructor(customWasmUri?: string, environmentVariables?: EnvironmentVariables) {
-        if (customWasmUri === undefined) {
+    public constructor(source?: string | WasmSource, environmentVariables?: EnvironmentVariables) {
+        if (typeof source === 'undefined') {
+            source = { type: 'uri' }
+        } else if (typeof source === 'string') {
+            source = { type: 'uri', uri: source }
+        }
+
+        if (source.type === 'uri' && typeof source.uri === 'undefined') {
             const isBrowser =
                 (typeof window === 'object' && typeof window.document !== 'undefined') ||
                 (typeof self === 'object' && self?.constructor?.name === 'DedicatedWorkerGlobalScope')
-
             if (isBrowser) {
-                customWasmUri = `https://unpkg.com/wasmoon@${version}/dist/glue.wasm`
+                source.uri = `https://unpkg.com/wasmoon@${version}/dist/glue.wasm`
             }
         }
 
-        this.luaWasmPromise = LuaWasm.initialize(customWasmUri, environmentVariables)
+        this.luaWasmPromise = LuaWasm.initialize(source, environmentVariables)
     }
 
     public async mountFile(path: string, content: string | ArrayBufferView): Promise<void> {
